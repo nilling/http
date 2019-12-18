@@ -16,6 +16,10 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #define INVALID_SOCKET -1
 
@@ -41,7 +45,9 @@ private:
     string getparamfromurl(string url);
     string gethostfromurl(string url);
 
-    int sokcetfdcheck(const int socketfd);
+    int socketfdcheck(const int socketfd);
+
+    void clear_socket(int socketfd);
 
     int httpsocketfd;
 };
