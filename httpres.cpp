@@ -199,3 +199,71 @@ string HttpRes::getipfromurl(string url){
         }
     }
 }
+
+int HttpRes::getPortfromUrl(string url){
+    string host = gethostfromurl(url);
+    int start = host.find(":");
+    if(start == -1){
+        return -1;
+    }
+    
+    int port = atoi(host.substr(start+1).c_str());
+
+    return port;
+}
+
+string HttpRes::getparamfromurl(string url){
+    int start;
+    if(url.find("http://") != -1){
+        start = 7;
+    }else if(url.find("https://") != -1){
+        start = 8;
+    }else{
+        debug("url not correct\n");
+        return nullptr;
+    }
+
+    string host = url.substr(start);
+
+    int pos = host.find("/");
+
+    return host.substr(pos+1);
+}
+
+int HttpRes::socketfdcheck(const int socketfd){
+    struct timeval timeout;
+    fd_set rset, wset;
+    FD_ZERO(&rset);
+    FD_ZERO(&wset);
+    FD_SET(socketfd, &rset);
+    FD_SET(socketfd, &wset);
+    timeout.tv_sec = 600;
+    timeout.tv_usec = 0;
+
+    int ret = select(socketfd+1, &rset, &wset, NULL, &timeout);
+    if(ret > 0){
+        int r = FD_ISSET(socketfd, &rset);
+        int w = FD_ISSET(socketfd, &wset);
+        if(r && !w){
+            char error[4] = "";
+            socklen_t len = sizeof(error);
+            int res = getsockopt(socketfd, SOL_SOCKET, SO_ERROR, error, &len);
+            if(res == 0){
+                if(!strcmp(error, "")){
+                    return ret;
+                }else{
+                    debug("%s %s [%s] getsocketopt error code:%d, message:%s\n", __FILE__, __FUNCTION__, __LINE__, errno, strerror(errno));
+                }
+            }else{
+                 debug("%s %s [%s] getsocketopt error code:%d, message:%s\n", __FILE__, __FUNCTION__, __LINE__, errno, strerror(errno));
+            }
+        }else{
+             debug("%s %s [%s] readfd:%d, writefd:%d\n", __FILE__, __FUNCTION__, __LINE__, r, w);
+        }
+    }else if(ret == 0){
+        debug("timeout");
+        return 0;
+    }else{
+        return -1;
+    }
+}
