@@ -20,6 +20,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <regex>
 
 #define INVALID_SOCKET -1
 

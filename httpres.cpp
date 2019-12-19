@@ -1,5 +1,6 @@
 #include "httpres.h"
 
+
 HttpRes* HttpRes::getInstance(){
     HttpRes *http = new HttpRes();
     if(http){
@@ -148,4 +149,53 @@ string HttpRes::httpHeadCreate(string url, int port, string method, string data)
     }
     head.append("\r\n\r\n");
     return head;
+}
+
+string HttpRes::gethostfromurl(string url){
+    int start, end;
+    if(url.find("http://") != -1){
+        start = 7;
+    }else if(url.find("https://") != -1){
+        start = 8;
+    }else{
+        debug("url not correct\n");
+        return nullptr;
+    }
+
+    string tmp_host = url.substr(start);
+
+    end = tmp_host.find_first_of("/");
+    if(end == -1){
+        debug("url not coorrect\n");
+        return nullptr;
+    }
+    string host = tmp_host.substr(0, end);
+    return host;
+}
+
+string HttpRes::getipfromurl(string url){
+    string host = gethostfromurl(url);
+
+    int end = host.find(":");
+    if(end == -1){
+        debug("url not correct\n");
+        return nullptr;
+    }
+
+    string ip = host.substr(0, end);
+
+    regex pattern("[0-9]*\\.[0-9]*\\.[0-9]*\\.[0-9]*");
+    if(regex_match(ip, pattern)){
+        return ip;
+    }else{
+        struct hostent *ht = gethostbyname(ip.c_str());
+        if(ht == nullptr){
+            debug("gethostbyname error\n");
+            return nullptr;
+        }
+        struct in_addr** addr_list = (struct in_addr **)ht->h_addr_list;
+        for(int i = 0; addr_list[i] != nullptr; i++){
+            return inet_ntoa(*addr_list[i]);
+        }
+    }
 }
