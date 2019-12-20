@@ -227,6 +227,9 @@ string HttpRes::getparamfromurl(string url){
     string host = url.substr(start);
 
     int pos = host.find("/");
+    if(pos == host.size()-1){
+        return "";
+    }
 
     return host.substr(pos+1);
 }
