@@ -23,6 +23,7 @@
 #include <regex>
 
 #define INVALID_SOCKET -1
+#define BUFSIZE 4096
 
 using namespace std;
 

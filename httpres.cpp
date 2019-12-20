@@ -135,7 +135,7 @@ string HttpRes::httpHeadCreate(string url, int port, string method, string data)
     head.append("\r\n");
     head.append("Cache-Control:no-cache\r\n");
     head.append("Connection:Keep-Alive\r\n");
-    if(method == "POST"){
+    if(method == "post"){
         char len[8] = {0};
         unsigned long  ilen = data.size();
         sprintf(len, "%lu", ilen);
@@ -265,5 +265,42 @@ int HttpRes::socketfdcheck(const int socketfd){
         return 0;
     }else{
         return -1;
+    }
+}
+
+
+string HttpRes::httpTransmit(string httphead, int sockfd){
+    char buf[BUFSIZE];
+    memset(buf, 0, sizeof(buf));
+
+    string result;
+
+    long ret = send(sockfd, (void*)httphead.c_str(), httphead.size(), 0);
+    if(ret < 0){
+        debug("socket send error, errno:%d, msg:%s", errno, strerror(errno));
+        clear_socket(sockfd);
+        return nullptr;
+    }
+
+    while(true){
+        ret = recv(sockfd, (void*)buf, BUFSIZE, 0);
+        if(ret < 0 ){
+            if(errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN){
+                continue;
+            }
+            else{
+                debug("socket recv error, errno:%d, msg:%s\n", errno, strerror(errno));
+                clear_socket(sockfd);
+                return nullptr;
+            }
+        }else if(ret == 0){
+            clear_socket(sockfd);
+            return nullptr;
+        }else{
+            result.append(buf);
+            if(ret < BUFSIZE){
+                return result;
+            }
+        }
     }
 }
