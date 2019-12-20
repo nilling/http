@@ -1,6 +1,6 @@
 #include "httpres.h"
 
-
+/*
 HttpRes* HttpRes::getInstance(){
     HttpRes *http = new HttpRes();
     if(http){
@@ -8,12 +8,18 @@ HttpRes* HttpRes::getInstance(){
     }
     return nullptr;
 }
+*/
 
 void HttpRes::debug(string fmt, ...){
     va_list ap;
     va_start(ap, fmt);
     vprintf(fmt.c_str(), ap);
     va_end(ap);
+}
+
+void HttpRes::clear_socket(int sockfd){
+    close(sockfd);
+    httpsocketfd = INVALID_SOCKET;
 }
 
 int HttpRes::httpGet(string url, int port, string& response){
@@ -56,7 +62,7 @@ int HttpRes::httpRequest(string url, int port, string method, string data, strin
     }
 
     int iport = getPortfromUrl(url);
-    if(iport < 0){
+    if(iport > 0){
         port = iport;
     }
 
@@ -126,7 +132,7 @@ string HttpRes::httpHeadCreate(string url, int port, string method, string data)
     head.append(method);
     head.append(" /");
     head.append(param);
-    head.append("HTTP/1.1\r\n");
+    head.append(" HTTP/1.1\r\n");
     head.append("Accept:*/*\r\n");
     head.append("Accept-Language:cn\r\n");
     head.append("User-Agent:Mozilla/4.0\r\n");
@@ -175,29 +181,24 @@ string HttpRes::gethostfromurl(string url){
 
 string HttpRes::getipfromurl(string url){
     string host = gethostfromurl(url);
-
+    string ip;
     int end = host.find(":");
-    if(end == -1){
-        debug("url not correct\n");
-        return nullptr;
+    if(end != -1){
+        return host.substr(0, end);
     }
 
-    string ip = host.substr(0, end);
-
-    regex pattern("[0-9]*\\.[0-9]*\\.[0-9]*\\.[0-9]*");
-    if(regex_match(ip, pattern)){
-        return ip;
-    }else{
-        struct hostent *ht = gethostbyname(ip.c_str());
-        if(ht == nullptr){
+    ip = host.substr(0, end);
+    struct hostent *ht = gethostbyname(ip.c_str());
+    if(ht == nullptr){
             debug("gethostbyname error\n");
             return nullptr;
-        }
-        struct in_addr** addr_list = (struct in_addr **)ht->h_addr_list;
-        for(int i = 0; addr_list[i] != nullptr; i++){
-            return inet_ntoa(*addr_list[i]);
-        }
     }
+    struct in_addr** addr_list = (struct in_addr **)ht->h_addr_list;
+    for(int i = 0; addr_list[i] != nullptr; i++){
+        return inet_ntoa(*addr_list[i]);
+    }
+
+    return nullptr;
 }
 
 int HttpRes::getPortfromUrl(string url){
@@ -244,7 +245,7 @@ int HttpRes::socketfdcheck(const int socketfd){
     if(ret > 0){
         int r = FD_ISSET(socketfd, &rset);
         int w = FD_ISSET(socketfd, &wset);
-        if(r && !w){
+        if(!r && w){
             char error[4] = "";
             socklen_t len = sizeof(error);
             int res = getsockopt(socketfd, SOL_SOCKET, SO_ERROR, error, &len);
@@ -266,6 +267,8 @@ int HttpRes::socketfdcheck(const int socketfd){
     }else{
         return -1;
     }
+
+    return 0;
 }
 
 
@@ -295,7 +298,7 @@ string HttpRes::httpTransmit(string httphead, int sockfd){
             }
         }else if(ret == 0){
             clear_socket(sockfd);
-            return nullptr;
+            return result;
         }else{
             result.append(buf);
             if(ret < BUFSIZE){
@@ -303,4 +306,5 @@ string HttpRes::httpTransmit(string httphead, int sockfd){
             }
         }
     }
+    return result;
 }

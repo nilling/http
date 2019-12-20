@@ -23,7 +23,7 @@
 #include <regex>
 
 #define INVALID_SOCKET -1
-#define BUFSIZE 4096
+#define BUFSIZE 50
 
 using namespace std;
 
@@ -32,7 +32,7 @@ public:
     HttpRes():httpsocketfd(INVALID_SOCKET){};
     ~HttpRes(){};
 
-    HttpRes* getInstance();
+    //HttpRes* getInstance();
     void debug(string fmt, ...);
     int httpGet(string url, int port, string& response);
     int httpPost(string url, int port, string data, string& response);
