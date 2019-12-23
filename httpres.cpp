@@ -48,11 +48,11 @@ int HttpRes::httpRequest(string url, int port, string method, string data, strin
     }
 
     if(httpsocketfd != INVALID_SOCKET){
-        string result = httpTransmit(httphead, httpsocketfd);
-        if(result != ""){
+        Response result = httpTransmit(httphead, httpsocketfd);
+        /*if(result != ""){
             response = result;
             return 0;
-        }
+        }*/
     }
 
     httpsocketfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -93,14 +93,14 @@ int HttpRes::httpRequest(string url, int port, string method, string data, strin
 
     int res = connect(httpsocketfd, (struct sockaddr*)&addr, sizeof(addr));
     if(res == 0){
-        string result = httpTransmit(httphead, httpsocketfd);
-        if(result == ""){
+        Response result = httpTransmit(httphead, httpsocketfd);
+        /*if(result == ""){
             clear_socket(httpsocketfd);
             return -1;
         }else{
             response = result;
             return 0;
-        }
+        }*/
     }else if(res < 0){
         if(errno != EINPROGRESS){
             return 0;
@@ -109,14 +109,14 @@ int HttpRes::httpRequest(string url, int port, string method, string data, strin
 
     res = socketfdcheck(httpsocketfd);
     if(res > 0){
-        string result = httpTransmit(httphead, httpsocketfd);
-        if(result == ""){
+        Response result = httpTransmit(httphead, httpsocketfd);
+        /*if(result == ""){
             clear_socket(httpsocketfd);
             return -1;
         }else{
             response = result;
             return 0;
-        }
+        }*/
     }else{
         clear_socket(httpsocketfd);
         return -1;
@@ -256,13 +256,13 @@ int HttpRes::socketfdcheck(const int socketfd){
                 if(!strcmp(error, "")){
                     return ret;
                 }else{
-                    debug("%s %s [%s] getsocketopt error code:%d, message:%s\n", __FILE__, __FUNCTION__, __LINE__, errno, strerror(errno));
+                    debug("%s %s [%d] getsocketopt error code:%d, message:%s\n", __FILE__, __FUNCTION__, __LINE__, errno, strerror(errno));
                 }
             }else{
-                 debug("%s %s [%s] getsocketopt error code:%d, message:%s\n", __FILE__, __FUNCTION__, __LINE__, errno, strerror(errno));
+                 debug("%s %s [%d] getsocketopt error code:%d, message:%s\n", __FILE__, __FUNCTION__, __LINE__, errno, strerror(errno));
             }
         }else{
-             debug("%s %s [%s] readfd:%d, writefd:%d\n", __FILE__, __FUNCTION__, __LINE__, r, w);
+             debug("%s %s [%d] readfd:%d, writefd:%d\n", __FILE__, __FUNCTION__, __LINE__, r, w);
         }
     }else if(ret == 0){
         debug("timeout");
@@ -275,39 +275,70 @@ int HttpRes::socketfdcheck(const int socketfd){
 }
 
 
-string HttpRes::httpTransmit(string httphead, int sockfd){
+Response HttpRes::httpTransmit(string httphead, int sockfd){
+
+    const char crlf[] = {'\r', '\n'};
+    vector <char> responsedata;
+    bool firstline = true;
+    bool parsedHeader = true;
+    bool contengLengthReceived = false;
+    unsigned long contengLength = 0;
+    bool chunkedResponse = false;
+    size_t expectedChunksize = 0;
+    bool removeCrlfAfterChunk = false;
+
     char buf[BUFSIZE];
     memset(buf, 0, sizeof(buf));
 
-    string result;
+    Response response;
 
-    long ret = send(sockfd, (void*)httphead.c_str(), httphead.size(), 0);
-    if(ret < 0){
-        debug("socket send error, errno:%d, msg:%s", errno, strerror(errno));
-        clear_socket(sockfd);
-        return nullptr;
-    }
-
+    const auto size = send(sockfd, (void*)httphead.c_str(), httphead.size(), 0);
+    
     while(true){
-        ret = recv(sockfd, (void*)buf, BUFSIZE, 0);
-        if(ret < 0 ){
-            if(errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN){
-                continue;
-            }
-            else{
-                debug("socket recv error, errno:%d, msg:%s\n", errno, strerror(errno));
-                clear_socket(sockfd);
-                return nullptr;
-            }
-        }else if(ret == 0){
-            clear_socket(sockfd);
-            return result;
-        }else{
-            result.append(buf);
-            if(ret < BUFSIZE){
-                return result;
+        const auto size = recv(sockfd, buf, BUFSIZE, 0);
+        if(size < 0){
+            debug("recv error\n");
+            return ;
+        }else if(size == 0)
+            break;
+
+        responsedata.insert(responsedata.end(), buf, buf+size);
+        if(!parsedHeader){
+            while(true){
+                const auto pos = search(responsedata.begin(), responsedata.end(), begin(crlf), end(crlf));
+                if(pos == responsedata.end()) break;
+
+                const string line(responsedata.begin(), pos);
+                responsedata.erase(responsedata.begin(), pos+2);
+
+                if(line.empty){
+                    parsedHeader = true;
+                    break;
+                }else if(firstline){
+                    firstline = false;
+                    string::size_type lastpos = 0;
+                    const auto length = line.length();
+                    vector<string> parts;
+
+                    while(lastpos < length + 1){
+                        auto p = line.find(' ', lastpos);
+                        if(p == string::npos) p = length;
+
+                        if(p != lastpos)
+                            parts.emplace_back(line.data()+lastpos, (string::size_type)p - lastpos);
+
+                        lastpos = p +1;
+                    }
+
+                    if(parts.size() >= 2)
+                        response.status = stoi(parts[1]);
+                }else{
+
+                }
+
             }
         }
+
     }
-    return result;
+    return response;
 }
