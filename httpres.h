@@ -21,38 +21,12 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <regex>
+#include "tool.h"
 
 #define INVALID_SOCKET -1
 #define BUFSIZE 4096
 
 using namespace std;
-
-class HttpRes{
-public:
-    HttpRes():httpsocketfd(INVALID_SOCKET){};
-    ~HttpRes(){};
-
-    //HttpRes* getInstance();
-    void debug(string fmt, ...);
-    int httpGet(string url, int port, string& response);
-    int httpPost(string url, int port, string data, string& response);
-
-private:
-    int httpRequest(string url, int port, string method, string data, string& reponse);
-    string httpHeadCreate(string url, int port, string method, string data);
-    Response httpTransmit(string httpHead, int sockfd);
-
-    int getPortfromUrl(string url);
-    string getipfromurl(string url);
-    string getparamfromurl(string url);
-    string gethostfromurl(string url);
-
-    int socketfdcheck(const int socketfd);
-
-    void clear_socket(int socketfd);
-
-    int httpsocketfd;
-};
 
 struct Response final
     {
@@ -130,6 +104,44 @@ struct Response final
         std::vector<std::string> headers;
         std::vector<char> body;
     };
+
+
+class HttpRes{
+public:
+    HttpRes(string url, int port, string method, string data);
+    ~HttpRes(){};
+
+    //HttpRes* getInstance();
+    void debug(string fmt, ...);
+    //int httpGet(string url, int port, string& response);
+    //int httpPost(string url, int port, string data, string& response);
+    int httpRequest(Response& response);
+
+private:
+    int _httpRequest(Response &response);
+    string httpHeadCreate();
+    Response httpTransmit();
+
+    int getPortfromUrl(string url);
+    string getipfromurl(string url);
+    string getparamfromurl(string url);
+    string gethostfromurl(string url);
+
+    int socketfdcheck(const int socketfd);
+
+    void clear_socket(int socketfd);
+
+    int httpsocketfd;
+    string httpheader;
+    string url;
+    int port;
+    string host;
+    string ip;
+    string method;
+    string data;
+    string param;
+};
+
 
 
 #endif

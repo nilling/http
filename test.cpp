@@ -4,9 +4,15 @@
 using namespace std;
 
 int main(){
-    string r;
-    HttpRes * http = new HttpRes();
-    http->httpGet("https://192.168.10.205/", 80, r);
-    cout << r << endl;
+    Response result;
+    HttpRes *http = new HttpRes("https://blog.csdn.net/baidu_18607183/article/details/51200652", -1, "GET", "");
+    http->httpRequest(result);
+    cout << result.status <<endl;
+    cout << result.body.size() << endl;
+    for(auto c : result.body){
+        cout << c;
+    }
+    cout << endl;
+
     return 0;
 }
