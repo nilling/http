@@ -10,6 +10,10 @@ HttpRes* HttpRes::getInstance(){
 }
 */
 
+HttpRes::~HttpRes(){
+    clear_socket(httpsocketfd);
+}
+
 HttpRes::HttpRes(string url, int port, string method, string data):httpsocketfd(INVALID_SOCKET), url(url), port(port), method(method), data(data){
     this->param = getparamfromurl(url);
     this->host = gethostfromurl(url);
@@ -387,5 +391,6 @@ Response HttpRes::httpTransmit(){
             }
         }
     }
+    clear_socket(httpsocketfd);
     return response;
 }
