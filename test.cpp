@@ -5,10 +5,13 @@ using namespace std;
 
 int main(){
     Response result;
-    HttpRes *http = new HttpRes("https://blog.csdn.net/baidu_18607183/article/details/51200652", -1, "GET", "");
+    HttpRes *http = new HttpRes("", 80, "GET", "");
     http->httpRequest(result);
     cout << result.status <<endl;
     cout << result.body.size() << endl;
+    for(auto h: result.headers){
+        cout << h << endl;
+    }
     for(auto c : result.body){
         cout << c;
     }
